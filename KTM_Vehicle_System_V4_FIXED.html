@@ -1,0 +1,629 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KTM Vehicle System</title>
+
+<style>
+body {
+    margin:0;
+    font-family:Arial;
+    background:#eef3f8;
+}
+
+.header {
+    background:linear-gradient(135deg,#163b70,#2456a4);
+    color:white;
+    padding:22px;
+    position:sticky;
+    top:0;
+    z-index:999;
+}
+
+.header h1 {
+    margin:0;
+}
+
+.container {
+    padding:20px;
+}
+
+.search {
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:12px;
+    margin-bottom:20px;
+    font-size:16px;
+}
+
+.grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+    gap:18px;
+}
+
+.card {
+    background:white;
+    border-radius:18px;
+    overflow:hidden;
+    cursor:pointer;
+    box-shadow:0 5px 18px rgba(0,0,0,0.08);
+    transition:0.2s;
+}
+
+.card:hover {
+    transform:translateY(-4px);
+}
+
+.car-image {
+    height:180px;
+    background:#dce6f5;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+}
+
+.car-image img {
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+
+.placeholder {
+    font-size:60px;
+}
+
+.card-body {
+    padding:16px;
+}
+
+.plate {
+    font-size:28px;
+    font-weight:bold;
+    color:#163b70;
+}
+
+.brand {
+    color:#666;
+    margin-top:4px;
+}
+
+.driver {
+    margin-top:10px;
+    font-size:14px;
+}
+
+.modal {
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.6);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+}
+
+.modal-content {
+    background:white;
+    width:90%;
+    max-width:1000px;
+    max-height:90vh;
+    overflow:auto;
+    border-radius:18px;
+}
+
+.modal-header {
+    background:#163b70;
+    color:white;
+    padding:20px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.close {
+    font-size:28px;
+    cursor:pointer;
+}
+
+.modal-body {
+    padding:20px;
+}
+
+table {
+    width:100%;
+    border-collapse:collapse;
+}
+
+td {
+    padding:8px;
+    border-bottom:1px solid #eee;
+    vertical-align:top;
+}
+
+.label {
+    width:200px;
+    font-weight:bold;
+    color:#444;
+}
+
+.editable {
+    background:#fff9d7;
+}
+
+.photo-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:14px;
+    margin-top:20px;
+}
+
+.photo-box {
+    border:2px dashed #bbb;
+    border-radius:12px;
+    padding:10px;
+    text-align:center;
+}
+
+.photo-box img {
+    width:100%;
+    height:180px;
+    object-fit:cover;
+    margin-top:10px;
+    border-radius:10px;
+}
+
+.photo-title {
+    font-weight:bold;
+    margin-bottom:8px;
+}
+
+.save-btn {
+    background:#163b70;
+    color:white;
+    border:none;
+    padding:12px 18px;
+    border-radius:10px;
+    cursor:pointer;
+    margin-top:20px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">
+    <h1>ฐานข้อมูลรถ KTM Steel</h1>
+    <div>คลิกที่รถเพื่อดูรายละเอียด / เพิ่มรูป / แก้ไขข้อมูล</div>
+</div>
+
+<div class="container">
+<button class="save-btn" style="margin-bottom:20px;" onclick="addVehicle()">
+➕ เพิ่มรถใหม่
+</button>
+
+<input class="search" id="search" type="text"
+placeholder="ค้นหาทะเบียน / คนขับ / รุ่นรถ"
+onkeyup="searchVehicle()">
+
+<div class="grid" id="grid"></div>
+
+</div>
+
+<div class="modal" id="modal">
+    <div class="modal-content">
+
+        <div class="modal-header">
+            <div id="modalTitle"></div>
+            <div class="close" onclick="closeModal()">×</div>
+        </div>
+
+        <div class="modal-body">
+
+            <table id="detailTable"></table>
+
+            <div class="photo-grid" id="photoGrid"></div>
+
+            <button class="save-btn" onclick="saveData()">
+                💾 Save Data
+            </button>
+
+        </div>
+
+    </div>
+</div>
+
+<script>
+
+const EXTRA_FIELDS = [
+"EquipmentCost",
+"RepairCost",
+"Accessories",
+"RepairHistory"
+];
+
+const VEHICLES = [{"VehicleID": "88-9275", "RegNo": "88-9275", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "889-275", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถเทรลเลอร์", "Spec": "รถเทรลเลอร์", "TSMSpec": "ลากจูง", "Brand": "Isuzu", "Model": "GXZ77NXXFT", "Year": "2017", "ChassisNo": "MP1GXZ77NGT000542", "EngineNo": "6UZ1RR7903", "FuelType": "Diesel", "FuelCap": "370", "VehicleWeigth": "8000", "LoadCap": "", "RegDate": "14/09/2017", "IneExp": "09/07/2026", "InsuranceCompany": "วิริยะประกันภัย (Viriyah)", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-239-1557", "CTPLExpDate": "30/06/2026", "TaxExp": "30/06/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย ธนายุทธ์ มุ่งก่ายกลาง", "MainStaff": "", "IDNumber": "1309902660261", "ServiceCenter": "ศูนย์ซ่อมคิงส์ยนต์", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "380973", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "02/02/2026", "TotMileage": "370586", "Note": "หัวลาก", "Owner": "สนง.ใหญ่", "LastUpdate": "29/04/2026", "id": 1}, {"VehicleID": "88-9279", "RegNo": "88-9279", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "889-279", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "หางเทลเลอร์6เมตร", "Spec": "หางเทลเลอร์6เมตร", "TSMSpec": "กึ่งพ่วง(พื้นเรียบ)", "Brand": "Isuzu", "Model": "", "Year": "2017", "ChassisNo": "MCK80086", "EngineNo": " ", "FuelType": "", "FuelCap": "", "VehicleWeigth": "4600", "LoadCap": "24000", "RegDate": "14/09/2017", "IneExp": "09/07/2026", "InsuranceCompany": "วิริยะประกันภัย (Viriyah)", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-239-1557", "CTPLExpDate": "30/06/2025", "TaxExp": "30/06/2025", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย ธนายุทธ์ มุ่งก่ายกลาง", "MainStaff": "", "IDNumber": "1309902660261", "ServiceCenter": "ศูนย์ซ่อมคิงส์ยนต์", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "", "TotMileage": "", "Note": "หางพ่วง 6เมตร", "Owner": "สนง.ใหญ่", "LastUpdate": "29/04/2026", "id": 2}, {"VehicleID": "88-9280", "RegNo": "88-9280", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "889-280", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "หางเทลเลอร์12เมตร", "Spec": "หางเทลเลอร์12เมตร", "TSMSpec": "กึ่งพ่วง(พื้นเรียบ)", "Brand": "Isuzu", "Model": "MCK-SF1240A-3A", "Year": "2017", "ChassisNo": "MCK12A-0185", "EngineNo": "", "FuelType": "", "FuelCap": "", "VehicleWeigth": "8000", "LoadCap": "30000", "RegDate": "14/09/2017", "IneExp": "09/07/2026", "InsuranceCompany": "วิริยะประกันภัย (Viriyah)", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-239-1557", "CTPLExpDate": "30/06/2026", "TaxExp": "30/06/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย ธนายุทธ์ มุ่งก่ายกลาง", "MainStaff": "", "IDNumber": "1309902660261", "ServiceCenter": "ศูนย์ซ่อมคิงส์ยนต์", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "", "TotMileage": "", "Note": "หางพ่วง 12เมตร", "Owner": "สนง.ใหญ่", "LastUpdate": "29/04/2026", "id": 3}, {"VehicleID": "86-0949", "RegNo": "86-0949", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "860-949", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 10 ล้อ", "Spec": "รถเครน", "TSMSpec": "กระบะบรรทุกพื้นเรียบ(มีเครื่องทุ่นแรง)", "Brand": "Hino", "Model": "FL3HTLA", "Year": "2004", "ChassisNo": "FL3HTLA-10376", "EngineNo": "H07D-A133660", "FuelType": "Diesel", "FuelCap": "200", "VehicleWeigth": "9300", "LoadCap": "14000", "RegDate": "11/05/2004", "IneExp": "31/12/2026", "InsuranceCompany": "วิริยะประกันภัย (Viriyah)", "InsuranceType": "ชั้น 3", "InsuranceContactNo": "02-239-1557", "CTPLExpDate": "31/12/2026", "TaxExp": "31/12/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย ธีระยุทธ ยุทธกลาง", "MainStaff": "นาย พิรม แก้วฝายนอก", "IDNumber": "1309900277614", "ServiceCenter": "ซ่อมอู่", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "04/01/2026", "TotMileage": "32226", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "27/04/2026", "id": 4}, {"VehicleID": "89-4864", "RegNo": "89-4864", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "894-864", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 10 ล้อ", "Spec": "รถบรรทุก 10 ล้อ", "TSMSpec": "กระบะบรรทุก(มีเสริมข้าง)", "Brand": "Isuzu", "Model": "FVM33P", "Year": "1997", "ChassisNo": "FVM33PT-3000181", "EngineNo": "6HH1-236660", "FuelType": "Diesel", "FuelCap": "200", "VehicleWeigth": "9200", "LoadCap": "14000", "RegDate": "25/03/1997", "IneExp": "15/07/2026", "InsuranceCompany": "วิริยะประกันภัย (Viriyah)", "InsuranceType": "ชั้น 3", "InsuranceContactNo": "02-239-1557", "CTPLExpDate": "31/12/2026", "TaxExp": "31/12/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "รถสำรอง", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมอู่", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "19/03/2025", "TotMileage": "", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "02/10/2025", "id": 5}, {"VehicleID": "91-0234", "RegNo": "91-0234", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "910-234", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 10 ล้อ", "Spec": "รถบรรทุก 10 ล้อ", "TSMSpec": "กระบะบรรทุกพื้นเรียบ", "Brand": "Isuzu", "Model": "FVM12MY", "Year": "1993", "ChassisNo": "FVM12MYK-3604358", "EngineNo": "6HK1-TC2002829", "FuelType": "Diesel", "FuelCap": "200", "VehicleWeigth": "9100", "LoadCap": "14000", "RegDate": "25/11/1993", "IneExp": "17/04/2026", "InsuranceCompany": "", "InsuranceType": "", "InsuranceContactNo": "", "CTPLExpDate": "30/06/2026", "TaxExp": "30/06/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "รถสำรอง", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมอู่", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "", "TotMileage": "", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "02/10/2025", "id": 6}, {"VehicleID": "89-6881", "RegNo": "89-6881", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "896-881", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 6 ล้อ", "Spec": "รถเครน", "TSMSpec": "กระบะบรรทุก(มีเครื่องทุ่นแรง)", "Brand": "Hino", "Model": "FC9JL1A-CBAHF", "Year": "2020", "ChassisNo": "MNKFC9JL1XHX10608", "EngineNo": "J05EUTH12791", "FuelType": "Diesel", "FuelCap": "200", "VehicleWeigth": "6500", "LoadCap": "7000", "RegDate": "27/04/2020", "IneExp": "24/03/2027", "InsuranceCompany": "", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-007-9009", "CTPLExpDate": "31/03/2027", "TaxExp": "31/03/2027", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย ฉลอง เทียมเพ็ง", "MainStaff": "นาย ธีระวัฒน์ ปลั่งกระโทก", "IDNumber": "1309900065421", "ServiceCenter": "ศูนย์ซ่อมราชสีมาเทพนคร", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "366814", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "17/03/2569", "TotMileage": "353178", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "29/04/2026", "id": 7}, {"VehicleID": "85-1434", "RegNo": "85-1434", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "851-434", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 6 ล้อ", "Spec": "รถเครน", "TSMSpec": "กระบะบรรทุกพื้นเรียบ(มีเครื่องทุ่นแรง)", "Brand": "Hino", "Model": "FD3HLA", "Year": "2005", "ChassisNo": "FD3HLA11165", "EngineNo": "H07D-A13174", "FuelType": "Diesel", "FuelCap": "200", "VehicleWeigth": "5500", "LoadCap": "7000", "RegDate": "16/05/2005", "IneExp": "30/07/2026", "InsuranceCompany": "วิริยะประกันภัย (Viriyah)", "InsuranceType": "ชั้น 3", "InsuranceContactNo": "02-239-1557", "CTPLExpDate": "31/03/2026", "TaxExp": "31/03/2026", "VehicleStatus": "ซ่อม", "MainDriver": "เดิม นาย สมชิต แคนงูเหลือม", "MainStaff": "", "IDNumber": "3300600302018", "ServiceCenter": "ซ่อมอู่", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "", "TotMileage": "", "Note": "รถจอดจากเกิดอุบัติเหตุ", "Owner": "สนง.ใหญ่", "LastUpdate": "07/10/2025", "id": 8}, {"VehicleID": "90-3684", "RegNo": "90-3684", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "903-684", "VehicleOwner": "บ.กรุงเทพแกรนด์แปซิฟิคลิส จก.", "VehicleType": "รถบรรทุก 6 ล้อ", "Spec": "รถเครน", "TSMSpec": "กระบะบรรทุก(มีเครื่องทุ่นแรง)", "Brand": "Hino", "Model": "FC9JL1A-CEAHF", "Year": "2022", "ChassisNo": "MNKFC9JL1XHX13515", "EngineNo": "J05EUTR17457", "FuelType": "Diesel", "FuelCap": "200", "VehicleWeigth": "6300", "LoadCap": "7000", "RegDate": "17/08/2022", "IneExp": "17/06/2026", "InsuranceCompany": "กรุงเทพประกันภัย (Bangkok Insurance)", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-285-8888", "CTPLExpDate": "30/06/2026", "TaxExp": "30/06/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย นิวัฒ พูนทะเล", "MainStaff": "นาย บุญอนันต์ นาคมอญ", "IDNumber": "3300101010496", "ServiceCenter": "ศูนย์ซ่อมราชสีมาเทพนคร", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "219725", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "28/03/2569", "TotMileage": "205511", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "29/04/2026", "id": 9}, {"VehicleID": "90-3685", "RegNo": "90-3685", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "903-685", "VehicleOwner": "บ.กรุงเทพแกรนด์แปซิฟิคลิส จก.", "VehicleType": "รถบรรทุก 6 ล้อ", "Spec": "รถเครน", "TSMSpec": "กระบะบรรทุก(มีเครื่องทุ่นแรง)", "Brand": "Hino", "Model": "FC9JL1A-CBAHF", "Year": "2022", "ChassisNo": "MNKFC9JL1XHX13274", "EngineNo": "J05EUTH17066", "FuelType": "Diesel", "FuelCap": "200", "VehicleWeigth": "6300", "LoadCap": "7000", "RegDate": "17/08/2022", "IneExp": "28/05/2026", "InsuranceCompany": "", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-319-1441", "CTPLExpDate": "30/06/2026", "TaxExp": "30/06/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย อนุวัฒน์ รุ่งกลาง", "MainStaff": "นาย ทรัสไกร สีทากุล", "IDNumber": "1100701883933", "ServiceCenter": "ศูนย์ซ่อมราชสีมาเทพนคร", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "239603", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "29/01/2569", "TotMileage": "235890", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "29/04/2026", "id": 10}, {"VehicleID": "90-6602", "RegNo": "90-6602", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "906-602", "VehicleOwner": "บ.กรุงเทพแกรนด์แปซิฟิคลิส จก.", "VehicleType": "รถบรรทุก 6 ล้อ", "Spec": "รถเครน", "TSMSpec": "กระบะบรรทุก(มีเครื่องทุ่นแรง)", "Brand": "Hino", "Model": "FC9JL1A-CBAHF", "Year": "2023", "ChassisNo": "MNKFC9JL1XHX15101", "EngineNo": "J05EUTH19900", "FuelType": "Diesel", "FuelCap": "200", "VehicleWeigth": "6400", "LoadCap": "7000", "RegDate": "14/06/2023", "IneExp": "18/05/2027", "InsuranceCompany": "", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-007-9009", "CTPLExpDate": "31/03/2027", "TaxExp": "31/03/2027", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย ประสงค์ ศักดา", "MainStaff": "นาย อดุลย์ ศักดา", "IDNumber": "3300101146312", "ServiceCenter": "ศูนย์ซ่อมราชสีมาเทพนคร", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "188150", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "03/02/2026", "TotMileage": "176387", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "29/04/2026", "id": 11}, {"VehicleID": "89-6870", "RegNo": "89-6870", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "896-870", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 6 ล้อ", "Spec": "รถเครน", "TSMSpec": "กระบะบรรทุก(มีเครื่องทุ่นแรง)", "Brand": "Hino", "Model": "FC9JLLA", "Year": "2020", "ChassisNo": "MNKFC9JLLXHX22160", "EngineNo": "J05ETCH57237", "FuelType": "Diesel", "FuelCap": "100", "VehicleWeigth": "6300", "LoadCap": "7000", "RegDate": "24/04/2020", "IneExp": "24/03/2027", "InsuranceCompany": "", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-007-9009", "CTPLExpDate": "31/03/2027", "TaxExp": "31/03/2027", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย ศราวุฒิ พูนโมมะดัน", "MainStaff": "", "IDNumber": "1309900277614", "ServiceCenter": "ศูนย์ซ่อมราชสีมาเทพนคร", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "254597", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "18/09/2568", "TotMileage": "247665", "Note": "", "Owner": "ติดตั้ง", "LastUpdate": "27/04/2026", "id": 12}, {"VehicleID": "86-4473", "RegNo": "86-4473", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "864-473", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 6 ล้อ", "Spec": "รถบรรทุก 6 ล้อ", "TSMSpec": "กระบะบรรทุก", "Brand": "Hino", "Model": "FD2JLB", "Year": "2010", "ChassisNo": "FD2JLB-12918", "EngineNo": "H07D-A116766", "FuelType": "Diesel", "FuelCap": "200", "VehicleWeigth": "4200", "LoadCap": "7000", "RegDate": "28/07/2010", "IneExp": "29/07/2026", "InsuranceCompany": "", "InsuranceType": "ชั้น 3", "InsuranceContactNo": "02-239-1557", "CTPLExpDate": "31/03/2026", "TaxExp": "31/03/2026", "VehicleStatus": "ซ่อม", "MainDriver": "รถสำรอง", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมอู่", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "", "TotMileage": "", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "06/10/2025", "id": 13}, {"VehicleID": "ยจ-3501", "RegNo": "ยจ-3501", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "003-501", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 4 ล้อ", "Spec": "รถกระบะ", "TSMSpec": "กระบะบรรทุก(ติดตั้งโครงเหล็ก)", "Brand": "Nissan", "Model": "NAVARA", "Year": "2018", "ChassisNo": "MNTAC2D23Z0012691", "EngineNo": "YD25800225T", "FuelType": "Diesel", "FuelCap": "80", "VehicleWeigth": "2150", "LoadCap": "2300", "RegDate": "13/11/2018", "IneExp": "14/07/2026", "InsuranceCompany": "", "InsuranceType": "ชั้น 2+", "InsuranceContactNo": "02-611-4000", "CTPLExpDate": "13/11/2026", "TaxExp": "13/11/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย สุทธิศักดิ์ ดีกลาง", "MainStaff": "นาย ธนพล พิทักษ์จันทร์", "IDNumber": "1309900629634", "ServiceCenter": "ซ่อมร้าน", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "331456", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "18/02/2569", "TotMileage": "330932", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "29/04/2026", "id": 14}, {"VehicleID": "ยจ-3503", "RegNo": "ยจ-3503", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "003-503", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 4 ล้อ", "Spec": "รถกระบะ", "TSMSpec": "กระบะบรรทุก(ติดตั้งโครงเหล็ก)", "Brand": "Nissan", "Model": "NAVARA", "Year": "2018", "ChassisNo": "MNTAC2D23Z0012692", "EngineNo": "YD25800081T", "FuelType": "Diesel", "FuelCap": "80", "VehicleWeigth": "2150", "LoadCap": "2300", "RegDate": "13/11/2018", "IneExp": "14/07/2026", "InsuranceCompany": "", "InsuranceType": "ชั้น 2+", "InsuranceContactNo": "02-611-4000", "CTPLExpDate": "13/11/2026", "TaxExp": "13/11/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย ถิรวัฒน์ เพียรงูเหลือม", "MainStaff": "นาย มนตรี หลวงชุมพล", "IDNumber": "1309902652536", "ServiceCenter": "ซ่อมร้าน", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "382631", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "19/02/2569", "TotMileage": "381248", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "29/04/2026", "id": 15}, {"VehicleID": "ผผ-8575", "RegNo": "ผผ-8575", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "008-575", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 4 ล้อ", "Spec": "รถกระบะ", "TSMSpec": "กระบะบรรทุก(ติดตั้งโครงเหล็ก)", "Brand": "Nissan", "Model": "AVLGRCFD22UHL-CDDA", "Year": "2011", "ChassisNo": "AVLGRCFD22001121", "EngineNo": "YD25 267067T", "FuelType": "Diesel", "FuelCap": "80", "VehicleWeigth": "1950", "LoadCap": "2300", "RegDate": "10/03/2011", "IneExp": "25/01/2027", "InsuranceCompany": "", "InsuranceType": "ชั้น 3+", "InsuranceContactNo": "02-611-4000", "CTPLExpDate": "10/03/2027", "TaxExp": "10/03/2027", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย ศรราม นิ่งกระโทก", "MainStaff": "นาย กุมภา เปล่งงูเหลือม", "IDNumber": "3300600302018", "ServiceCenter": "ซ่อมอู่", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "423931", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "20/01/2569", "TotMileage": "419201", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "29/04/2026", "id": 16}, {"VehicleID": "ยก-621", "RegNo": "ยก-621", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "000-621", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถกระบะ", "Spec": "รถกระบะ", "TSMSpec": "", "Brand": "Nissan", "Model": "AVL2RCYD23FHL-C", "Year": "2016", "ChassisNo": "MNTAC2D23Z0002661", "EngineNo": "YD25 638015T", "FuelType": "Diesel", "FuelCap": "80", "VehicleWeigth": "2100", "LoadCap": "2000", "RegDate": "02/03/2016", "IneExp": "11/01/2027", "InsuranceCompany": "", "InsuranceType": "ชั้น 3+", "InsuranceContactNo": "02-611-4000", "CTPLExpDate": "02/03/2027", "TaxExp": "02/03/2027", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย เจษฎา เตียงกูล", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมอู่", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "419758", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "28/08/2568", "TotMileage": "", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "29/04/2026", "id": 17}, {"VehicleID": "ยก-622", "RegNo": "ยก-622", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "000-622", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 4 ล้อ", "Spec": "รถกระบะ", "TSMSpec": "กระบะบรรทุก(ติดตั้งโครงเหล็ก)", "Brand": "Nissan", "Model": "AVL2RDYD23FHL C", "Year": "2016", "ChassisNo": "MNTAC2D23Z0002199", "EngineNo": "YD25 634072T", "FuelType": "Diesel", "FuelCap": "80", "VehicleWeigth": "2100", "LoadCap": "2300", "RegDate": "02/03/2016", "IneExp": "11/01/2026", "InsuranceCompany": "", "InsuranceType": "", "InsuranceContactNo": "", "CTPLExpDate": "02/03/2026", "TaxExp": "02/03/2026", "VehicleStatus": "ซ่อม", "MainDriver": "", "MainStaff": "", "IDNumber": "1100800880151", "ServiceCenter": "ซ่อมอู่", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "384008", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "13/08/2568", "TotMileage": "", "Note": "รถจอดจากเกิดอุบัติเหตุ", "Owner": "สนง.ใหญ่", "LastUpdate": "04/10/2025", "id": 18}, {"VehicleID": "ยธ-1006", "RegNo": "ยธ-1006", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "001-006", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 4 ล้อ", "Spec": "รถกระบะ", "TSMSpec": "กระบะบรรทุก(ติดตั้งโครงเหล็ก)", "Brand": "Toyota", "Model": "HILUX REVO", "Year": "2021", "ChassisNo": "MR0CB8CB404259295", "EngineNo": "2GD0931270", "FuelType": "Diesel", "FuelCap": "80", "VehicleWeigth": "2000", "LoadCap": "2500", "RegDate": "21/04/2021", "IneExp": "10/03/2027", "InsuranceCompany": "", "InsuranceType": "ชั้น 2+", "InsuranceContactNo": "02-611-4000", "CTPLExpDate": "21/04/2027", "TaxExp": "21/04/2027", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย สัญญา จำปาโพธิ์", "MainStaff": "นาย ธนยศ อุปคุณบุญจิรา", "IDNumber": "3300101532093", "ServiceCenter": "ศูนย์ซ่อมโตโยต้า", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "281952", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "01/04/2026", "TotMileage": "275530", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "29/04/2026", "id": 19}, {"VehicleID": "ยธ-1008", "RegNo": "ยธ-1008", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "001-008", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 4 ล้อ", "Spec": "รถกระบะ", "TSMSpec": "กระบะบรรทุก(ติดตั้งโครงเหล็ก)", "Brand": "Toyota", "Model": "HILUX REVO", "Year": "2021", "ChassisNo": "MR0CB8CB904259292", "EngineNo": "2GD0931822", "FuelType": "Diesel", "FuelCap": "80", "VehicleWeigth": "2200", "LoadCap": "2500", "RegDate": "21/04/2021", "IneExp": "10/03/2027", "InsuranceCompany": "", "InsuranceType": "ชั้น 2+", "InsuranceContactNo": "02-611-4000", "CTPLExpDate": "21/04/2027", "TaxExp": "21/04/2027", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย เดชอุดม คำขุนทด", "MainStaff": "นาย สุรศักดิ์ ชะลอกลาง", "IDNumber": "3300100803719", "ServiceCenter": "ศูนย์ซ่อมโตโยต้า", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "259153", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "03/02/2026", "TotMileage": "256924", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "29/04/2026", "id": 20}, {"VehicleID": "ยธ-1009", "RegNo": "ยธ-1009", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "001-009", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 4 ล้อ", "Spec": "รถกระบะ", "TSMSpec": "กระบะบรรทุก(ติดตั้งโครงเหล็ก)", "Brand": "Toyota", "Model": "HILUX REVO", "Year": "2021", "ChassisNo": "MR0CB8CB804253533", "EngineNo": "2GD0897097", "FuelType": "Diesel", "FuelCap": "80", "VehicleWeigth": "2000", "LoadCap": "2500", "RegDate": "21/04/2021", "IneExp": "10/03/2027", "InsuranceCompany": "", "InsuranceType": "ชั้น 2+", "InsuranceContactNo": "02-611-4000", "CTPLExpDate": "21/04/2027", "TaxExp": "21/04/2027", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย อำนาจ ของโพธิ์", "MainStaff": "นาย จักรกฤต มัวจะบก", "IDNumber": "1309900977527", "ServiceCenter": "ศูนย์ซ่อมโตโยต้า", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "255530", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "21/03/2569", "TotMileage": "248920", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "29/04/2025", "id": 21}, {"VehicleID": "ผน-6007", "RegNo": "ผน-6007", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "006-007", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 4 ล้อ", "Spec": "รถกระบะ", "TSMSpec": "กระบะบรรทุก(ติดตั้งโครงเหล็ก)", "Brand": "Nissan", "Model": "AVLGRCFD22UHL-CDDA", "Year": "2009", "ChassisNo": "AVLGRCFD22000448", "EngineNo": "YD25 162816T", "FuelType": "Diesel", "FuelCap": "80", "VehicleWeigth": "1900", "LoadCap": "2000", "RegDate": "27/10/2009", "IneExp": "25/07/2026", "InsuranceCompany": "", "InsuranceType": "ชั้น 3", "InsuranceContactNo": "02-611-4000", "CTPLExpDate": "27/10/2026", "TaxExp": "27/10/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย สมชิต แคนงูเหลือม", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมอู่", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "651807", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "23/04/2569", "TotMileage": "571845", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "27/04/2026", "id": 22}, {"VehicleID": "ยม-5707", "RegNo": "ยม-5707", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "005-707", "VehicleOwner": "บ.โตโยต้าลิสซิ่ง จก.", "VehicleType": "รถบรรทุก 4 ล้อ", "Spec": "รถกระบะ", "TSMSpec": "กระบะบรรทุก(ติดตั้งโครงเหล็ก)", "Brand": "Toyota", "Model": "HILUX CHAMP", "Year": "2024", "ChassisNo": "MR3AA9CA806300767", "EngineNo": "2GD5569170", "FuelType": "Diesel", "FuelCap": "70", "VehicleWeigth": "2100", "LoadCap": "2500", "RegDate": "04/09/2024", "IneExp": "29/05/2027", "InsuranceCompany": "วิริยะประกันภัย (Viriyah)", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-239-1557", "CTPLExpDate": "04/09/2026", "TaxExp": "04/09/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย ปรเมษฐ์ มามะเริง", "MainStaff": "นาย อรรณพ เกียรติโพธิ์", "IDNumber": "1309900411124", "ServiceCenter": "ศูนย์ซ่อมโตโยต้า", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "97559", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "02/04/2026", "TotMileage": "90639", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "29/04/2026", "id": 23}, {"VehicleID": "ยม-5709", "RegNo": "ยม-5709", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "005-709", "VehicleOwner": "บ.โตโยต้าลิสซิ่ง จก.", "VehicleType": "รถบรรทุก 4 ล้อ", "Spec": "รถกระบะ", "TSMSpec": "กระบะบรรทุก(ติดตั้งโครงเหล็ก)", "Brand": "Toyota", "Model": "HILUX CHAMP", "Year": "2024", "ChassisNo": "MR3AA9CA706300646", "EngineNo": "2GD5561306", "FuelType": "Diesel", "FuelCap": "70", "VehicleWeigth": "2100", "LoadCap": "2500", "RegDate": "04/09/2024", "IneExp": "29/05/2027", "InsuranceCompany": "วิริยะประกันภัย (Viriyah)", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-239-1557", "CTPLExpDate": "04/09/2026", "TaxExp": "04/09/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย มงกุฎ โมราเจริญ", "MainStaff": "นาย อนุชา เจริญด่าน", "IDNumber": "3360400217386", "ServiceCenter": "ศูนย์ซ่อมโตโยต้า", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "84874", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "24/02/2569", "TotMileage": "83007", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "29/04/2026", "id": 24}, {"VehicleID": "ผบ-3267", "RegNo": "ผบ-3267", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "003-267", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 4 ล้อ", "Spec": "รถกระบะ", "TSMSpec": "กระบะบรรทุก(ติดตั้งโครงเหล็ก)", "Brand": "Nissan", "Model": "AVLGRCFD22UHL-CDDA", "Year": "2010", "ChassisNo": "AVLGRCFD22000427", "EngineNo": "YD25 158949T", "FuelType": "Diesel", "FuelCap": "80", "VehicleWeigth": "2000", "LoadCap": "2500", "RegDate": "31/03/2010", "IneExp": "15/03/2027", "InsuranceCompany": "", "InsuranceType": "ชั้น 3+", "InsuranceContactNo": "02-611-4000", "CTPLExpDate": "31/03/2027", "TaxExp": "31/03/2027", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย เจษฎา แก้วระวัง", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมร้าน", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "549447", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "08/09/2025", "TotMileage": "", "Note": "", "Owner": "สาขา 3", "LastUpdate": "22/04/2026", "id": 25}, {"VehicleID": "ยม-5708", "RegNo": "ยม-5708", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "005-708", "VehicleOwner": "บ.โตโยต้าลิสซิ่ง จก.", "VehicleType": "รถบรรทุก 4 ล้อ", "Spec": "รถกระบะ", "TSMSpec": "กระบะบรรทุก(ติดตั้งโครงเหล็ก)", "Brand": "Toyota", "Model": "HILUX CHAMP", "Year": "2024", "ChassisNo": "MR3AA9CA606300637", "EngineNo": "2GD5560137", "FuelType": "Diesel", "FuelCap": "70", "VehicleWeigth": "2100", "LoadCap": "2500", "RegDate": "04/09/2024", "IneExp": "29/05/2027", "InsuranceCompany": "วิริยะประกันภัย (Viriyah)", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-239-1557", "CTPLExpDate": "04/09/2026", "TaxExp": "04/09/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นายณรงค์ฤทธิ์  ต้นโพธิ์", "MainStaff": "นาย อดิศักดิ์ กล้าจอหอ", "IDNumber": "", "ServiceCenter": "ศูนย์ซ่องโตโยต้า", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "42204", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "08/01/2026", "TotMileage": "", "Note": "", "Owner": "สาขา 1", "LastUpdate": "04/10/2025", "id": 26}, {"VehicleID": "ผร-6091", "RegNo": "ผร-6091", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "006-091", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 4 ล้อ", "Spec": "รถกระบะ", "TSMSpec": "กระบะบรรทุก(ติดตั้งโครงเหล็ก)", "Brand": "Nissan", "Model": "AVLGRTFD40UHN", "Year": "2013", "ChassisNo": "MNTACGD40Z0601132", "EngineNo": "YD25 461009T", "FuelType": "Diesel", "FuelCap": "80", "VehicleWeigth": "2100", "LoadCap": "2300", "RegDate": "12/02/2013", "IneExp": "11/11/2026", "InsuranceCompany": "", "InsuranceType": "ชั้น 3", "InsuranceContactNo": "02-636-5656", "CTPLExpDate": "12/02/2027", "TaxExp": "12/02/2027", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย ธวัชชัย กรองโพธิ์", "MainStaff": "นาย หวนคนึง จ่างโพธิ์", "IDNumber": "", "ServiceCenter": "ซ่อมร้าน", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "411771", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "20/04/2569", "TotMileage": "402326", "Note": "", "Owner": "สาขา 1", "LastUpdate": "29/04/2026", "id": 27}, {"VehicleID": "ขร-6049", "RegNo": "ขร-6049", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "006-049", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 4 ล้อ", "Spec": "รถกระบะ", "TSMSpec": "", "Brand": "Isuzu", "Model": "D-MAX", "Year": "2017", "ChassisNo": "MP1TFR87JJG008758", "EngineNo": "RZ4ERZ4275", "FuelType": "Diesel", "FuelCap": "76", "VehicleWeigth": "1800", "LoadCap": "500", "RegDate": "13/12/2017", "IneExp": "29/11/2026", "InsuranceCompany": "กรุงเทพประกันภัย (Bangkok Insurance)", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-285-8888", "CTPLExpDate": "13/12/2026", "TaxExp": "12/12/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย จิระเดช สิทธิเสนา", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ศูนย์ซ่อมคิงส์ยนต์", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "117919", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "01/04/2026", "TotMileage": "", "Note": "", "Owner": "สำนักงาน", "LastUpdate": "04/10/2025", "id": 28}, {"VehicleID": "ผธ-7244", "RegNo": "ผธ-7244", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "007-244", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 4 ล้อ", "Spec": "รถกระบะ", "TSMSpec": "กระบะบรรทุก(ติดตั้งโครงเหล็ก)", "Brand": "Nissan", "Model": "AVLGCFD22UHL-CDDA", "Year": "2009", "ChassisNo": "AVLGRCFD22000104", "EngineNo": "YD25 094984T", "FuelType": "Diesel", "FuelCap": "80", "VehicleWeigth": "1900", "LoadCap": "2300", "RegDate": "25/03/2009", "IneExp": "07/11/2026", "InsuranceCompany": "", "InsuranceType": "ชั้น 3+", "InsuranceContactNo": "02-611-4000", "CTPLExpDate": "11/01/2027", "TaxExp": "25/03/2027", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นายนนทกานต์   ศรีทรัพย์", "MainStaff": "นาย เสกสรรค์ การบรรรจง", "IDNumber": "", "ServiceCenter": "ซ่อมร้าน", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "16/03/2569", "TotMileage": "", "Note": "", "Owner": "สาขา 1", "LastUpdate": "06/10/2025", "id": 29}, {"VehicleID": "ผผ-5164", "RegNo": "ผผ-5164", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "005-164", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถกระบะ", "Spec": "รถกระบะ", "TSMSpec": "กระบะบรรทุก(มีหลังคา)", "Brand": "Nissan", "Model": "BVLGRVYD40UHGBBEBC", "Year": "2011", "ChassisNo": "MNTBCGD40Z0049836", "EngineNo": "YD25 259503T", "FuelType": "Diesel", "FuelCap": "80", "VehicleWeigth": "1600", "LoadCap": "1000", "RegDate": "11/01/2011", "IneExp": "15/03/2027", "InsuranceCompany": "", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-640-7777", "CTPLExpDate": "25/03/2027", "TaxExp": "11/01/2027", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "ติดตั้ง", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมอู่", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "392592", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "25/04/2569", "TotMileage": "382692", "Note": "", "Owner": "ติดตั้ง", "LastUpdate": "27/04/2026", "id": 30}, {"VehicleID": "1นง-6877", "RegNo": "1นง-6877", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "006-877", "VehicleOwner": "บ.เอเซียเสริมกิจลิสซิ่ง จก.", "VehicleType": "รถตู้", "Spec": "รถตู้", "TSMSpec": "", "Brand": "Toyota", "Model": "COMMUTER", "Year": "2022", "ChassisNo": "MMKBBHCP606519636", "EngineNo": "1GD5290582", "FuelType": "Diesel", "FuelCap": "70", "VehicleWeigth": "2550", "LoadCap": "1000", "RegDate": "16/12/2022", "IneExp": "09/11/2026", "InsuranceCompany": "วิริยะประกันภัย (Viriyah)", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-239-1557", "CTPLExpDate": "16/12/2026", "TaxExp": "16/12/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย ดนชฏ จันทวงษ์", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ศูนย์ซ่อมโตโยต้า", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "179003", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "28/02/2569", "TotMileage": "", "Note": "", "Owner": "บริหาร", "LastUpdate": "22/04/2026", "id": 31}, {"VehicleID": "นค-7288", "RegNo": "นค-7288", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "007-288", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถตู้", "Spec": "รถตู้", "TSMSpec": "", "Brand": "Hyundai", "Model": "H-1", "Year": "2010", "ChassisNo": "KMJWA37JMAU186988", "EngineNo": "D4CB9551375", "FuelType": "Diesel", "FuelCap": "75", "VehicleWeigth": "2200", "LoadCap": "1000", "RegDate": "24/02/2010", "IneExp": "28/11/2026", "InsuranceCompany": "", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-665-4000", "CTPLExpDate": "24/02/2027", "TaxExp": "24/02/2027", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "รถส่วนกลาง", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ศูนย์ซ่อม", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "389700", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "21/04/2569", "TotMileage": "379827", "Note": "", "Owner": "สำนักงาน", "LastUpdate": "22/04/2026", "id": 32}, {"VehicleID": "ผผ-909", "RegNo": "ผผ-909", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "000-909", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถกระบะ", "Spec": "รถกระบะ", "TSMSpec": "", "Brand": "Nissan", "Model": "BVLGRVND40UHGCBDBB", "Year": "2010", "ChassisNo": "MNTBCGD40Z0047439", "EngineNo": "YD25 233559T", "FuelType": "Diesel", "FuelCap": "80", "VehicleWeigth": "1600", "LoadCap": "1000", "RegDate": "21/09/2010", "IneExp": "14/07/2026", "InsuranceCompany": "", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-649-1999", "CTPLExpDate": "21/09/2026", "TaxExp": "21/09/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "รถส่วนกลาง", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมอู่", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "520140", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "07/04/2026", "TotMileage": "511265", "Note": "", "Owner": "สำนักงาน", "LastUpdate": "22/04/2026", "id": 33}, {"VehicleID": "ผฉ-6545", "RegNo": "ผฉ-6545", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "006-545", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 4 ล้อ", "Spec": "รถกระบะ", "TSMSpec": "", "Brand": "Nissan", "Model": "AVLGRDFD22THL-P", "Year": "2007", "ChassisNo": "AVLGRCFD22009913", "EngineNo": "YD25 017950T", "FuelType": "Diesel", "FuelCap": "80", "VehicleWeigth": "1750", "LoadCap": "", "RegDate": "05/06/2007", "IneExp": "", "InsuranceCompany": "", "InsuranceType": "", "InsuranceContactNo": "", "CTPLExpDate": "", "TaxExp": "", "VehicleStatus": "ขายแล้ว", "MainDriver": "", "MainStaff": "", "IDNumber": "", "ServiceCenter": "", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "", "TotMileage": "", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "03/10/2025", "id": 34}, {"VehicleID": "ขว-520", "RegNo": "ขว-520", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "000-520", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถยนต์นั่งส่วนบุคคล", "Spec": "รถยนต์นั่งส่วนบุคคล", "TSMSpec": "", "Brand": "Mitsubishi", "Model": "A03AXTHHRU", "Year": "2018", "ChassisNo": "MMTXTA03AJH000616", "EngineNo": "3A92UGS7025", "FuelType": "Gasoline", "FuelCap": "35", "VehicleWeigth": "900", "LoadCap": "500", "RegDate": "30/05/2018", "IneExp": "03/01/2027", "InsuranceCompany": "", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-649-1999", "CTPLExpDate": "30/05/2027", "TaxExp": "30/05/2027", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "รถส่วนกลาง", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมอู่", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "187694", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "06/03/2026", "TotMileage": "176315", "Note": "", "Owner": "สำนักงาน", "LastUpdate": "22/04/2026", "id": 35}, {"VehicleID": "ผร-2020", "RegNo": "ผร-2020", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "002-020", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถยนต์นั่งส่วนบุคคล", "Spec": "รถกระบะ", "TSMSpec": "", "Brand": "Mitsubishi", "Model": "KA4TNCNUZRU", "Year": "2012", "ChassisNo": "MMTCNKA40CD016934", "EngineNo": "4D56UCDF4272", "FuelType": "Diesel", "FuelCap": "75", "VehicleWeigth": "1550", "LoadCap": "500", "RegDate": "20/12/2012", "IneExp": "29/03/2027", "InsuranceCompany": "", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-611-4000", "CTPLExpDate": "20/03/2027", "TaxExp": "20/03/2027", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย ประถม สายสั้น", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมร้าน", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "850289", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "17/02/2026", "TotMileage": "", "Note": "", "Owner": "สำนักงาน", "LastUpdate": "22/04/2026", "id": 36}, {"VehicleID": "ขฉ-3588", "RegNo": "ขฉ-3588", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "003-588", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถยนต์นั่งส่วนบุคคล", "Spec": "รถกระบะ", "TSMSpec": "", "Brand": "Chevrolet", "Model": "TRAILBLAZER", "Year": "2014", "ChassisNo": "MMM156MK0EH612150", "EngineNo": "BG3G133161129", "FuelType": "Diesel", "FuelCap": "76", "VehicleWeigth": "2000", "LoadCap": "", "RegDate": "20/06/2014", "IneExp": "18/03/2027", "InsuranceCompany": "", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-611-4000", "CTPLExpDate": "20/06/2026", "TaxExp": "20/06/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย บวร ชาตะวราหะ", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมร้าน", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "312597", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "24/04/2569", "TotMileage": "303145", "Note": "", "Owner": "ติดตั้ง", "LastUpdate": "27/04/2025", "id": 37}, {"VehicleID": "กบ-1488", "RegNo": "กบ-1488", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "001-488", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถยนต์นั่งส่วนบุคคล", "Spec": "รถกระบะ", "TSMSpec": "", "Brand": "Mitsubishi", "Model": "KB8TGJRXZRU", "Year": "2007", "ChassisNo": "MMTJRKB807D022717", "EngineNo": "4M41CAA3206", "FuelType": "Diesel", "FuelCap": "75", "VehicleWeigth": "2000", "LoadCap": "", "RegDate": "23/01/2007", "IneExp": "15/11/2026", "InsuranceCompany": "", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-649-1999", "CTPLExpDate": "23/01/2027", "TaxExp": "23/01/2027", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "นาย สุนัน สูงยิ่ง", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมร้าน", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "571784", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "28/02/2026", "TotMileage": "570067", "Note": "", "Owner": "ติดตั้ง", "LastUpdate": "22/04/2026", "id": 38}, {"VehicleID": "84-8983", "RegNo": "84-8983", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "848-983", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 6 ล้อ", "Spec": "รถบรรทุก 6 ล้อ", "TSMSpec": "กระบะบรรทุกพื้นเรียบ", "Brand": "Hino", "Model": "FD3HLA", "Year": "2003", "ChassisNo": "FD3HLA-15897", "EngineNo": "H07D-A120446", "FuelType": "Diesel", "FuelCap": "200", "VehicleWeigth": "4100", "LoadCap": "7000", "RegDate": "14/11/2003", "IneExp": "19/11/2025", "InsuranceCompany": "", "InsuranceType": "", "InsuranceContactNo": "", "CTPLExpDate": "", "TaxExp": "", "VehicleStatus": "ซ่อม", "MainDriver": "รถสำรอง", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมอู่", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "", "TotMileage": "", "Note": "รถจอดไม่ได้ใช้งาน", "Owner": "สนง.ใหญ่", "LastUpdate": "02/10/2025", "id": 39}, {"VehicleID": "85-3511", "RegNo": "85-3511", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "853-511", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 10 ล้อ", "Spec": "รถเครน", "TSMSpec": "กระบะบรรทุกพื้นเรียบ(มีเครื่องทุ่นแรง)", "Brand": "Hino", "Model": "TE11", "Year": "2006", "ChassisNo": "TE11-23068", "EngineNo": "H07C-TC 12439", "FuelType": "Diesel", "FuelCap": "200", "VehicleWeigth": "8200", "LoadCap": "14000", "RegDate": "31/05/2006", "IneExp": "09/07/2026", "InsuranceCompany": "วิริยะประกันภัย (Viriyah)", "InsuranceType": "ชั้น 3", "InsuranceContactNo": "02-239-1557", "CTPLExpDate": "31/03/2027", "TaxExp": "31/03/2027", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "รถสำรอง", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมอู่", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "", "TotMileage": "", "Note": "รถจอดไม่ได้ใช้งาน", "Owner": "สนง.ใหญ่", "LastUpdate": "06/10/2025", "id": 40}, {"VehicleID": "85-5640", "RegNo": "85-5640", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "855-640", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 4 ล้อ", "Spec": "รถกระบะ", "TSMSpec": "", "Brand": "Kia", "Model": "K2700", "Year": "2007", "ChassisNo": "KNCSE211267114654", "EngineNo": "J2-435120", "FuelType": "Diesel", "FuelCap": "60", "VehicleWeigth": "2000", "LoadCap": "", "RegDate": "09/07/2007", "IneExp": "", "InsuranceCompany": "", "InsuranceType": "", "InsuranceContactNo": "", "CTPLExpDate": "", "TaxExp": "", "VehicleStatus": "ปลดระวางและไม่นำมาใช้อีก", "MainDriver": "", "MainStaff": "", "IDNumber": "", "ServiceCenter": "", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "", "TotMileage": "", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "02/10/2025", "id": 41}, {"VehicleID": "ผน-2942", "RegNo": "ผน-2942", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "002-942", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถบรรทุก 4 ล้อ", "Spec": "รถกระบะ", "TSMSpec": "", "Brand": "Nissan", "Model": "AVLGRCFD22UHL-CDDA", "Year": "2009", "ChassisNo": "AVLGRCFD22000275", "EngineNo": "YD25 148020T", "FuelType": "Diesel", "FuelCap": "80", "VehicleWeigth": "1600", "LoadCap": "", "RegDate": "10/08/2009", "IneExp": "", "InsuranceCompany": "", "InsuranceType": "", "InsuranceContactNo": "", "CTPLExpDate": "", "TaxExp": "", "VehicleStatus": "ปลดระวางและไม่นำมาใช้อีก", "MainDriver": "", "MainStaff": "", "IDNumber": "", "ServiceCenter": "", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "", "TotMileage": "", "Note": "", "Owner": "สนง.ใหญ่", "LastUpdate": "03/10/2025", "id": 42}, {"VehicleID": "นค-8884", "RegNo": "นค-8884", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "008-884", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถยนต์นั่งส่วนบุคคล", "Spec": "", "TSMSpec": "", "Brand": "Hyundai", "Model": "H-1", "Year": "2019", "ChassisNo": "MHXWF31JMKJ319612", "EngineNo": "D4CBK775884", "FuelType": "Diesel", "FuelCap": "75", "VehicleWeigth": "2200", "LoadCap": "", "RegDate": "08/11/2019", "IneExp": "09/11/2026", "InsuranceCompany": "", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-665-4000", "CTPLExpDate": "08/11/2026", "TaxExp": "08/11/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "รถผู้บริหาร", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมศูนย์", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "70500", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "21/01/2026", "TotMileage": "", "Note": "", "Owner": "บริหาร", "LastUpdate": "22/04/2026", "id": 43}, {"VehicleID": "กธ-4488", "RegNo": "กธ-4488", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "004-488", "VehicleOwner": "นางชัญญ สุวรรณโชติ", "VehicleType": "รถยนต์นั่งส่วนบุคคล", "Spec": "", "TSMSpec": "", "Brand": "Hyundai", "Model": "STARGAZER", "Year": "2023", "ChassisNo": "MF3NC81DTPJ029484", "EngineNo": "G4FLPQ202732", "FuelType": "Gasoline", "FuelCap": "40", "VehicleWeigth": "1250", "LoadCap": "", "RegDate": "27/07/2023", "IneExp": "30/06/2026", "InsuranceCompany": "วิริยะประกันภัย (Viriyah)", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-239-1557", "CTPLExpDate": "27/07/2026", "TaxExp": "27/07/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "รถผู้บริหาร", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมศูนย์", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "", "TotMileage": "", "Note": "", "Owner": "บริหาร", "LastUpdate": "06/10/2025", "id": 44}, {"VehicleID": "กธ-8844", "RegNo": "กธ-8844", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "008-844", "VehicleOwner": "บ.เมอร์เซเดส-เบนซ์ โมชิลิตี้จก.", "VehicleType": "รถยนต์นั่งส่วนบุคคล", "Spec": "", "TSMSpec": "", "Brand": "Mercedes-Benz", "Model": "AMG C43 4MATIC COUPE", "Year": "2022", "ChassisNo": "W1K2053646L063567", "EngineNo": "27682331135360", "FuelType": "Gasoline", "FuelCap": "66", "VehicleWeigth": "1700", "LoadCap": "", "RegDate": "23/06/2022", "IneExp": "19/12/2026", "InsuranceCompany": "", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-611-4000", "CTPLExpDate": "23/06/2026", "TaxExp": "23/06/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "รถผู้บริหาร", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมศูนย์", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "", "TotMileage": "", "Note": "", "Owner": "บริหาร", "LastUpdate": "06/10/2025", "id": 45}, {"VehicleID": "จก-9125", "RegNo": "จก-9125", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "009-125", "VehicleOwner": "บ.บีเอ็มดับเบิลยู ลิสซิ่ง จก.", "VehicleType": "รถยนต์นั่งส่วนบุคคล", "Spec": "", "TSMSpec": "", "Brand": "BMW", "Model": "330E M SPORT", "Year": "2025", "ChassisNo": "MMF74FV090Y135793", "EngineNo": "0061W385", "FuelType": "Gasoline", "FuelCap": "40", "VehicleWeigth": "1600", "LoadCap": "", "RegDate": "02/07/2025", "IneExp": "22/05/2027", "InsuranceCompany": "วิริยะประกันภัย (Viriyah)", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-239-1557", "CTPLExpDate": "02/07/2027", "TaxExp": "02/07/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "รถผู้บริหาร", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมศูนย์", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "", "TotMileage": "", "Note": "", "Owner": "บริหาร", "LastUpdate": "06/10/2025", "id": 46}, {"VehicleID": "จก-8838", "RegNo": "จก-8838", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "008-838", "VehicleOwner": "ธนาคารทิสโก้ จก.", "VehicleType": "รถยนต์นั่งส่วนบุคคล", "Spec": "", "TSMSpec": "", "Brand": "GWM", "Model": "GWM TANK 300", "Year": "2025", "ChassisNo": "MNUBB7S70SR005348", "EngineNo": "E24D256CR001713", "FuelType": "Diesel", "FuelCap": "78", "VehicleWeigth": "2200", "LoadCap": "", "RegDate": "25/06/2025", "IneExp": "28/05/2027", "InsuranceCompany": "ทิพยประกันภัย (Dhipaya)", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "0", "CTPLExpDate": "28/05/2027", "TaxExp": "25/06/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "รถผู้บริหาร", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมศูนย์", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "", "TotMileage": "", "Note": "", "Owner": "บริหาร", "LastUpdate": "06/10/2025", "id": 47}, {"VehicleID": "ขต-8088", "RegNo": "ขต-8088", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "008-088", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถยนต์นั่งส่วนบุคคล", "Spec": "", "TSMSpec": "", "Brand": "BMW", "Model": "X1 SDRIVE18D M SPORT", "Year": "2017", "ChassisNo": "MMFHT740705C24975", "EngineNo": "0029W050", "FuelType": "Diesel", "FuelCap": "50", "VehicleWeigth": "1500", "LoadCap": "", "RegDate": "04/09/2017", "IneExp": "09/01/2027", "InsuranceCompany": "", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-611-4000", "CTPLExpDate": "04/09/2026", "TaxExp": "04/09/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "รถผู้บริหาร", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมศูนย์", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "", "TotMileage": "", "Note": "", "Owner": "บริหาร", "LastUpdate": "06/10/2025", "id": 48}, {"VehicleID": "งบ-7920", "RegNo": "งบ-7920", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "007-920", "VehicleOwner": "บ.เค.ที.เอ็ม.สตีล จก.", "VehicleType": "รถยนต์นั่งส่วนบุคคล", "Spec": "", "TSMSpec": "", "Brand": "Mazda", "Model": "MAZDA 2", "Year": "2022", "ChassisNo": "MM8DL2S3A0W822336", "EngineNo": "P350428313", "FuelType": "Gasoline", "FuelCap": "44", "VehicleWeigth": "1100", "LoadCap": "", "RegDate": "23/08/2022", "IneExp": "05/08/2026", "InsuranceCompany": "", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-611-4000", "CTPLExpDate": "23/08/2026", "TaxExp": "23/08/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "รถผู้บริหาร", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมศูนย์", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "", "TotMileage": "", "Note": "", "Owner": "บริหาร", "LastUpdate": "06/10/2025", "id": 49}, {"VehicleID": "งย-3981", "RegNo": "งย-3981", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "003-981", "VehicleOwner": "ธนาคารทิสโก้ จก.", "VehicleType": "รถยนต์นั่งส่วนบุคคล", "Spec": "", "TSMSpec": "", "Brand": "HAVAL", "Model": "HAVAL H6", "Year": "2023", "ChassisNo": "MNUAA1S60NR009103", "EngineNo": "GW4B15D22632003775", "FuelType": "Gasoline", "FuelCap": "61", "VehicleWeigth": "1700", "LoadCap": "", "RegDate": "20/03/2023", "IneExp": "27/02/2027", "InsuranceCompany": "", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-665-4000", "CTPLExpDate": "20/03/2027", "TaxExp": "20/03/2027", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "รถผู้บริหาร", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมศูนย์", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "", "TotMileage": "", "Note": "", "Owner": "บริหาร", "LastUpdate": "07/10/2025", "id": 50}, {"VehicleID": "งธ-7547", "RegNo": "งธ-7547", "RegProvince": "นครราชสีมา", "VehicleCostDataCode": "007-547", "VehicleOwner": "บ.บีเอ็มดับเบิลยู ลิสซิ่ง จก.", "VehicleType": "รถยนต์นั่งส่วนบุคคล", "Spec": "", "TSMSpec": "", "Brand": "BMW", "Model": "220I GRAN COUPE M SPORT", "Year": "2021", "ChassisNo": "MMF34AK000Y106477", "EngineNo": "0170W289", "FuelType": "Gasoline", "FuelCap": "49", "VehicleWeigth": "1600", "LoadCap": "", "RegDate": "08/12/2021", "IneExp": "10/07/2026", "InsuranceCompany": "", "InsuranceType": "ชั้น 1", "InsuranceContactNo": "02-640-7777", "CTPLExpDate": "08/12/2026", "TaxExp": "08/12/2026", "VehicleStatus": "ใช้งานปกติ", "MainDriver": "รถผู้บริหาร", "MainStaff": "", "IDNumber": "", "ServiceCenter": "ซ่อมศูนย์", "TireChangeIntervalKM": "", "TireServiceLife": "", "OilChangeIntervalKM": "", "LastTireChangeKM": "", "LastTireChangeDate": "", "LastOilChangeKM": "", "LastOilChangeDate": "", "TotMileage": "", "Note": "", "Owner": "บริหาร", "LastUpdate": "07/10/2025", "id": 51}];
+
+const PHOTO_TYPES = [
+    "ด้านหน้า",
+    "ด้านหลัง",
+    "กระบะ / พื้นที่บรรทุก",
+    "ภายในรถ",
+    "ด้านข้าง",
+    "Dashboard / เลขไมล์"
+];
+
+let currentCar = null;
+
+function createCard(car){
+    const img = localStorage.getItem('cover_'+car.id);
+
+    return `
+    <div class="card" onclick="openModal(${car.id})">
+
+        <div class="car-image">
+            ${img
+                ? `<img src="${img}">`
+                : `<div class="placeholder">🚚</div>`
+            }
+        </div>
+
+        <div class="card-body">
+
+            <div class="plate">${car.RegNo || '-'}</div>
+
+            <div class="brand">
+                ${car.Brand || ''} ${car.Model || ''}
+            </div>
+
+            <div class="driver">
+                👤 ${car.MainDriver || '-'}
+            </div>
+
+        </div>
+
+    </div>
+    `;
+}
+
+function render(data){
+    document.getElementById("grid").innerHTML =
+        data.map(createCard).join('');
+}
+
+function searchVehicle(){
+    const q = document.getElementById("search").value.toLowerCase();
+
+    const filtered = VEHICLES.filter(v =>
+        JSON.stringify(v).toLowerCase().includes(q)
+    );
+
+    render(filtered);
+}
+
+function openModal(id){
+    currentCar = VEHICLES.find(v=>v.id==id);
+
+    document.getElementById("modal").style.display="flex";
+
+    document.getElementById("modalTitle").innerHTML =
+        `<h2>${currentCar.RegNo}</h2>`;
+
+    let rows = "";
+
+    Object.keys(currentCar).forEach(key=>{
+        if(key!=="id"){
+            rows += `
+            <tr>
+                <td class="label">${key}</td>
+                <td contenteditable="true"
+                    class="editable">${currentCar[key]}</td>
+            </tr>
+            `;
+        }
+    });
+
+    document.getElementById("detailTable").innerHTML = rows;
+
+    let photos = "";
+
+    PHOTO_TYPES.forEach((p,index)=>{
+
+        const imgKey = `img_${id}_${index}`;
+        const img = localStorage.getItem(imgKey);
+
+        photos += `
+        <div class="photo-box">
+
+            <div class="photo-title">${p}</div>
+
+            <input type="file" accept="image/*"
+                onchange="previewImage(event,'${imgKey}',${id},${index})">
+
+            <img id="${imgKey}"
+                 src="${img || ''}">
+
+        </div>
+        `;
+    });
+
+    document.getElementById("photoGrid").innerHTML = photos;
+}
+
+function closeModal(){
+    document.getElementById("modal").style.display="none";
+}
+
+function previewImage(event,key,id,index){
+    const file = event.target.files[0];
+
+    if(!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function(e){
+        localStorage.setItem(key,e.target.result);
+
+        document.getElementById(key).src = e.target.result;
+
+        if(index===0){
+            localStorage.setItem('cover_'+id,e.target.result);
+            render(VEHICLES);
+        }
+    }
+
+    reader.readAsDataURL(file);
+}
+
+function saveData(){
+    alert("ข้อมูลถูกบันทึกใน Browser แล้ว");
+}
+
+render(VEHICLES);
+
+
+let currentVehicleId = null;
+
+function createPhotoBoxes(vehicleId){
+    const photoGrid = document.getElementById('photoGrid');
+    photoGrid.innerHTML = '';
+
+    const photoTypes = [
+        'รูปรถด้านหน้า',
+        'รูปรถด้านข้าง',
+        'รูปรถด้านหลัง',
+        'รูปเล่มทะเบียน'
+    ];
+
+    const savedPhotos = JSON.parse(localStorage.getItem('vehiclePhotos') || '{}');
+
+    photoTypes.forEach((title, index) => {
+        const key = vehicleId + '_' + index;
+
+        const box = document.createElement('div');
+        box.className = 'photo-box';
+
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'photo-title';
+        titleDiv.innerText = title;
+
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+
+        const img = document.createElement('img');
+        img.style.display = 'none';
+
+        if(savedPhotos[key]){
+            img.src = savedPhotos[key];
+            img.style.display = 'block';
+        }
+
+        input.addEventListener('change', function(e){
+            const file = e.target.files[0];
+            if(!file) return;
+
+            const reader = new FileReader();
+
+            reader.onload = function(event){
+                img.src = event.target.result;
+                img.style.display = 'block';
+
+                savedPhotos[key] = event.target.result;
+                localStorage.setItem('vehiclePhotos', JSON.stringify(savedPhotos));
+            };
+
+            reader.readAsDataURL(file);
+        });
+
+        box.appendChild(titleDiv);
+        box.appendChild(input);
+        box.appendChild(img);
+
+        photoGrid.appendChild(box);
+    });
+}
+
+const originalOpenModal = openModal;
+
+openModal = function(id){
+    originalOpenModal(id);
+    currentVehicleId = id;
+    createPhotoBoxes(id);
+};
+
+
+function addVehicle(){
+
+    const reg = prompt("ทะเบียนรถ");
+    if(!reg) return;
+
+    const brand = prompt("ยี่ห้อรถ");
+    const model = prompt("รุ่นรถ");
+
+    const newVehicle = {
+        VehicleID: reg,
+        RegNo: reg,
+        RegProvince: "นครราชสีมา",
+        Brand: brand || "",
+        Model: model || "",
+        VehicleType: "รถใหม่",
+        VehicleStatus: "ใช้งานปกติ",
+        MainDriver: "",
+        Owner: "",
+        TotMileage: "",
+        LastUpdate: new Date().toLocaleDateString('th-TH'),
+        EquipmentCost: "0",
+        RepairCost: "0",
+        Accessories: "",
+        RepairHistory: "",
+        id: Date.now()
+    };
+
+    VEHICLES.unshift(newVehicle);
+
+    localStorage.setItem('vehicleData', JSON.stringify(VEHICLES));
+
+    renderVehicles(VEHICLES);
+
+    alert("เพิ่มรถเรียบร้อย");
+}
+
+window.addEventListener('load', ()=>{
+
+    const saved = localStorage.getItem('vehicleData');
+
+    if(saved){
+        const data = JSON.parse(saved);
+
+        VEHICLES.length = 0;
+
+        data.forEach(v=>VEHICLES.push(v));
+    }
+
+    renderVehicles(VEHICLES);
+});
+
+const originalSaveData = saveData;
+
+saveData = function(){
+
+    const rows = document.querySelectorAll('#detailTable tr');
+
+    rows.forEach(row=>{
+
+        const label = row.querySelector('.label');
+        const value = row.querySelector('[contenteditable]');
+
+        if(label && value && currentVehicleId){
+
+            const key = label.innerText.replace(':','').trim();
+
+            const vehicle = VEHICLES.find(v=>v.id == currentVehicleId);
+
+            if(vehicle){
+                vehicle[key] = value.innerText;
+            }
+        }
+    });
+
+    localStorage.setItem('vehicleData', JSON.stringify(VEHICLES));
+
+    alert('บันทึกข้อมูลเรียบร้อย');
+}
+
+
+// ===== FIX ADD VEHICLE DISPLAY =====
+function refreshVehicleGrid(){
+    const grid = document.getElementById('grid');
+    if(!grid) return;
+
+    grid.innerHTML = '';
+
+    VEHICLES.forEach(vehicle=>{
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.onclick = ()=>openModal(vehicle.id);
+
+        card.innerHTML = `
+            <div class="car-image">
+                <div class="placeholder">🚚</div>
+            </div>
+
+            <div class="card-body">
+                <div class="plate">${vehicle.RegNo || '-'}</div>
+                <div class="brand">
+                    ${(vehicle.Brand || '')} ${(vehicle.Model || '')}
+                </div>
+
+                <div class="driver">
+                    👨‍🔧 ${vehicle.MainDriver || '-'}
+                </div>
+            </div>
+        `;
+
+        grid.appendChild(card);
+    });
+}
+
+window.addEventListener('load', ()=>{
+
+    const saved = localStorage.getItem('vehicleData');
+
+    if(saved){
+        try{
+            const data = JSON.parse(saved);
+
+            VEHICLES.length = 0;
+
+            data.forEach(v=>VEHICLES.push(v));
+        }catch(e){
+            console.log(e);
+        }
+    }
+
+    setTimeout(()=>{
+        refreshVehicleGrid();
+    },300);
+});
+
+const oldAddVehicle = addVehicle;
+
+addVehicle = function(){
+
+    const reg = prompt("ทะเบียนรถ");
+    if(!reg) return;
+
+    const brand = prompt("ยี่ห้อรถ") || "";
+    const model = prompt("รุ่นรถ") || "";
+
+    const newVehicle = {
+        VehicleID: reg,
+        RegNo: reg,
+        Brand: brand,
+        Model: model,
+        VehicleType: "รถใหม่",
+        VehicleStatus: "ใช้งานปกติ",
+        MainDriver: "",
+        id: Date.now()
+    };
+
+    VEHICLES.unshift(newVehicle);
+
+    localStorage.setItem('vehicleData', JSON.stringify(VEHICLES));
+
+    refreshVehicleGrid();
+
+    alert("เพิ่มรถสำเร็จ");
+};
+
+</script>
+
+</body>
+</html>
