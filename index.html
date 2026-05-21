@@ -393,12 +393,15 @@ function createPhotoBoxes(vehicleId){
     const photoGrid = document.getElementById('photoGrid');
     photoGrid.innerHTML = '';
 
-    const photoTypes = [
-        'รูปรถด้านหน้า',
-        'รูปรถด้านข้าง',
-        'รูปรถด้านหลัง',
-        'รูปเล่มทะเบียน'
-    ];
+   const photoTypes = [
+    'รูปรถด้านหน้า',
+    'รูปรถด้านซ้าย',
+    'รูปรถด้านขวา',
+    'รูปรถด้านหลัง',
+    'รูปภายในห้องโดยสาร',
+    'รูปกระบะ / พื้นกระบะ',
+    'รูปเล่มทะเบียน'
+];
 
     const savedPhotos = JSON.parse(localStorage.getItem('vehiclePhotos') || '{}');
 
